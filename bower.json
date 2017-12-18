@@ -1,0 +1,19 @@
+{
+  "name": "purescript-react-queue",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^3.1.1",
+    "purescript-console": "^3.0.0",
+    "purescript-queue": "^4.0.1",
+    "purescript-react": "^5.1.0",
+    "purescript-exceptions": "^3.1.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^3.0.0"
+  }
+}
