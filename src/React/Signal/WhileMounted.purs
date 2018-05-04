@@ -19,7 +19,7 @@ whileMounted :: forall props state render eff a
              -> ReactSpec props state render (ref :: REF | eff)
 whileMounted sig f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff (Signal.subscribe (f this) sig)
+      unsafeCoerceEff (Signal.subscribeLight (f this) sig)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
       unsafeCoerceEff (Signal.clear sig)
@@ -35,7 +35,7 @@ whileMountedIx :: forall props state render eff a
                -> ReactSpec props state render (ref :: REF | eff)
 whileMountedIx sig k f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff (IxSignal.subscribeIx (f this) k sig)
+      unsafeCoerceEff (IxSignal.subscribeIxLight (f this) k sig)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
       unsafeCoerceEff (IxSignal.delete k sig)
@@ -54,7 +54,7 @@ whileMountedIxUUID sig f reactSpec = reactSpec
       unsafeCoerceEff $ do
         k <- genUUID
         writeRef kRef (Just k)
-        IxSignal.subscribeIx (f this) (show k) sig
+        IxSignal.subscribeIxLight (f this) (show k) sig
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
       unsafeCoerceEff $ do

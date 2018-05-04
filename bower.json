@@ -16,7 +16,7 @@
     "purescript-queue": "^4.0.1",
     "purescript-react": "^5.1.0",
     "purescript-exceptions": "^3.1.0",
-    "purescript-zeta": "^0.0.3"
+    "purescript-zeta": "^0.0.6"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"
