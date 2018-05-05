@@ -6,7 +6,7 @@ import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import React (ReactSpec)
-import Queue.Scope (WRITE)
+import Queue.Types (WRITE)
 import Queue (Queue, putQueue)
 import Queue.One (Queue, putQueue) as One
 import IxQueue (IxQueue, putIxQueue)

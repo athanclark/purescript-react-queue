@@ -8,7 +8,7 @@ import Control.Monad.Eff.Exception (EXCEPTION, throw)
 import Control.Monad.Eff.Ref (REF, newRef, writeRef, readRef)
 import Control.Monad.Eff.Unsafe (unsafeCoerceEff, unsafePerformEff)
 import React (ReactSpec, ReactThis)
-import Queue.Scope (READ)
+import Queue.Types (READ)
 import Queue (Queue, onQueue, delQueue)
 import Queue.One (Queue, onQueue, delQueue) as One
 import IxQueue (IxQueue, onIxQueue, delIxQueue)
