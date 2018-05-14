@@ -9,7 +9,7 @@ import React (ReactSpec)
 import Queue.Types (WRITE)
 import Queue (Queue, putQueue)
 import Queue.One (Queue, putQueue) as One
-import IxQueue (IxQueue, putIxQueue)
+import IxQueue (IxQueue, putIxQueue, broadcastExceptIxQueue)
 
 
 data ReactLifeCycle props state
@@ -113,6 +113,38 @@ withLifeCycleIx k q reactSpec = reactSpec
       reactSpec.componentWillReceiveProps this props
   , componentDidCatch = Just \this error params -> do
       unsafeCoerceEff $ putIxQueue q k $ DidCatch {error, componentStack: params.componentStack}
+      case reactSpec.componentDidCatch of
+        Nothing -> pure unit
+        Just f -> f this error params
+  }
+
+
+withLifeCycleBroadcastIx :: forall props state render eff rw
+                          . Array String -- exception keys
+                         -> IxQueue (write :: WRITE | rw) (Effects eff) (ReactLifeCycle props state)
+                         -> ReactSpec props state render (Effects eff)
+                         -> ReactSpec props state render (Effects eff)
+withLifeCycleBroadcastIx ks q reactSpec = reactSpec
+  { componentWillMount = \this -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks WillMount
+      reactSpec.componentWillMount this
+  , componentDidMount = \this -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks DidMount
+      reactSpec.componentDidMount this
+  , componentWillUnmount = \this -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks WillUnmount
+      reactSpec.componentWillUnmount this
+  , componentWillUpdate = \this props state -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ WillUpdate {props,state}
+      reactSpec.componentWillUpdate this props state
+  , componentDidUpdate = \this props state -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ DidUpdate {props,state}
+      reactSpec.componentDidUpdate this props state
+  , componentWillReceiveProps = \this props -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ WillReceiveProps {props}
+      reactSpec.componentWillReceiveProps this props
+  , componentDidCatch = Just \this error params -> do
+      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ DidCatch {error, componentStack: params.componentStack}
       case reactSpec.componentDidCatch of
         Nothing -> pure unit
         Just f -> f this error params
