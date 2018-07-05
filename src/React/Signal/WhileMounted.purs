@@ -43,6 +43,22 @@ whileMountedIx sig k f reactSpec = reactSpec
   }
 
 
+whileMountedIx :: forall props state render eff a
+                . IxSignal.IxSignal (ref :: REF | eff) a
+               -> String
+               -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
+               -> ReactSpec props state render (ref :: REF | eff)
+               -> ReactSpec props state render (ref :: REF | eff)
+whileMountedIx sig k f reactSpec = reactSpec
+  { componentDidMount = \this -> do
+      unsafeCoerceEff (IxSignal.subscribeIxLight (f this) k sig)
+      reactSpec.componentDidMount this
+  , componentWillUnmount = \this -> do
+      unsafeCoerceEff (IxSignal.delete k sig)
+      reactSpec.componentWillUnmount this
+  }
+
+
 
 whileMountedIxUUID :: forall props state render eff a
                     . IxSignal.IxSignal (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
