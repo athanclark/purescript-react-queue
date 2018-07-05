@@ -43,15 +43,16 @@ whileMountedIx sig k f reactSpec = reactSpec
   }
 
 
-whileMountedIx :: forall props state render eff a
-                . IxSignal.IxSignal (ref :: REF | eff) a
-               -> String
-               -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-               -> ReactSpec props state render (ref :: REF | eff)
-               -> ReactSpec props state render (ref :: REF | eff)
-whileMountedIx sig k f reactSpec = reactSpec
+whileMountedIxDiff :: forall props state render eff a
+                    . Eq a
+                   => IxSignal.IxSignal (ref :: REF | eff) a
+                   -> String
+                   -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
+                   -> ReactSpec props state render (ref :: REF | eff)
+                   -> ReactSpec props state render (ref :: REF | eff)
+whileMountedIxDiff sig k f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff (IxSignal.subscribeIxLight (f this) k sig)
+      unsafeCoerceEff (IxSignal.subscribeIxDiffLight (f this) k sig)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
       unsafeCoerceEff (IxSignal.delete k sig)
@@ -71,6 +72,34 @@ whileMountedIxUUID sig f reactSpec = reactSpec
         k <- genUUID
         writeRef kRef (Just k)
         IxSignal.subscribeIxLight (f this) (show k) sig
+      reactSpec.componentDidMount this
+  , componentWillUnmount = \this -> do
+      unsafeCoerceEff $ do
+        mk <- readRef kRef
+        case mk of
+          Nothing -> throw "No UUID ref!"
+          Just k -> do
+            IxSignal.delete (show k) sig
+            writeRef kRef Nothing
+      reactSpec.componentWillUnmount this
+  }
+  where
+    kRef = unsafePerformEff (newRef Nothing)
+
+
+
+whileMountedIxDiffUUID :: forall props state render eff a
+                        . Eq a
+                      => IxSignal.IxSignal (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
+                      -> (ReactThis props state -> a -> Eff (ref :: REF , uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
+                      -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
+                      -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
+whileMountedIxDiffUUID sig f reactSpec = reactSpec
+  { componentDidMount = \this -> do
+      unsafeCoerceEff $ do
+        k <- genUUID
+        writeRef kRef (Just k)
+        IxSignal.subscribeIxDiffLight (f this) (show k) sig
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
       unsafeCoerceEff $ do
