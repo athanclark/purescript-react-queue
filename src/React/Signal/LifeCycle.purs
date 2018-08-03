@@ -7,6 +7,7 @@ import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import React (ReactSpec)
+import Signal.Types (READ, WRITE)
 import Signal.Internal as Signal
 
 
@@ -25,7 +26,7 @@ withLifeCycle :: forall props state render eff
                . ReactSpec props state render (ref :: REF | eff)
               -> Eff (ref :: REF | eff)
                   { spec :: ReactSpec props state render (ref :: REF | eff)
-                  , signal :: Signal.Signal (ref :: REF | eff) (ReactLifeCycle props state)
+                  , signal :: Signal.Signal (read :: READ, write :: WRITE) (ref :: REF | eff) (ReactLifeCycle props state)
                   }
 withLifeCycle reactSpec = do
   signal <- Signal.make Unmounted

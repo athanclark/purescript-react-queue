@@ -8,12 +8,13 @@ import Control.Monad.Eff.Exception (EXCEPTION, throw)
 import Control.Monad.Eff.Ref (REF, newRef, writeRef, readRef)
 import Control.Monad.Eff.Unsafe (unsafeCoerceEff, unsafePerformEff)
 import React (ReactSpec, ReactThis)
+import Signal.Types (READ)
 import Signal.Internal as Signal
 import IxSignal.Internal as IxSignal
 
 
-whileMounted :: forall props state render eff a
-              . Signal.Signal (ref :: REF | eff) a
+whileMounted :: forall props state render eff rw a
+              . Signal.Signal (read :: READ | rw) (ref :: REF | eff) a
              -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
              -> ReactSpec props state render (ref :: REF | eff)
              -> ReactSpec props state render (ref :: REF | eff)
@@ -27,8 +28,8 @@ whileMounted sig f reactSpec = reactSpec
   }
 
 
-whileMountedIx :: forall props state render eff a
-                . IxSignal.IxSignal (ref :: REF | eff) a
+whileMountedIx :: forall props state render eff rw a
+                . IxSignal.IxSignal (read :: READ | rw) (ref :: REF | eff) a
                -> String
                -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
                -> ReactSpec props state render (ref :: REF | eff)
@@ -43,9 +44,9 @@ whileMountedIx sig k f reactSpec = reactSpec
   }
 
 
-whileMountedIxDiff :: forall props state render eff a
+whileMountedIxDiff :: forall props state render eff rw a
                     . Eq a
-                   => IxSignal.IxSignal (ref :: REF | eff) a
+                   => IxSignal.IxSignal (read :: READ | rw) (ref :: REF | eff) a
                    -> String
                    -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
                    -> ReactSpec props state render (ref :: REF | eff)
@@ -61,8 +62,8 @@ whileMountedIxDiff sig k f reactSpec = reactSpec
 
 
 
-whileMountedIxUUID :: forall props state render eff a
-                    . IxSignal.IxSignal (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
+whileMountedIxUUID :: forall props state render eff rw a
+                    . IxSignal.IxSignal (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
                    -> (ReactThis props state -> a -> Eff (ref :: REF , uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
                    -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
                    -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
@@ -88,9 +89,9 @@ whileMountedIxUUID sig f reactSpec = reactSpec
 
 
 
-whileMountedIxDiffUUID :: forall props state render eff a
+whileMountedIxDiffUUID :: forall props state render eff rw a
                         . Eq a
-                      => IxSignal.IxSignal (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
+                      => IxSignal.IxSignal (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
                       -> (ReactThis props state -> a -> Eff (ref :: REF , uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
                       -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
                       -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
