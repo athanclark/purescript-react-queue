@@ -2,115 +2,111 @@ module React.Signal.WhileMounted where
 
 import Prelude
 import Data.Maybe (Maybe (..))
-import Data.UUID (genUUID, GENUUID)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Exception (EXCEPTION, throw)
-import Control.Monad.Eff.Ref (REF, newRef, writeRef, readRef)
-import Control.Monad.Eff.Unsafe (unsafeCoerceEff, unsafePerformEff)
-import React (ReactSpec, ReactThis)
+import Data.UUID (genUUID)
+import Effect (Effect)
+import Effect.Exception (throw)
+import Effect.Ref as Ref
+import Effect.Unsafe (unsafePerformEffect)
+import React (ReactSpecOptional, ReactThis)
 import Signal.Types (READ)
 import Signal.Internal as Signal
 import IxSignal.Internal as IxSignal
 
 
-whileMounted :: forall props state render eff rw a
-              . Signal.Signal (read :: READ | rw) (ref :: REF | eff) a
-             -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-             -> ReactSpec props state render (ref :: REF | eff)
-             -> ReactSpec props state render (ref :: REF | eff)
+whileMounted :: forall props state snapshot spec rw a
+              . Signal.Signal (read :: READ | rw) a
+             -> (a -> Effect Unit)
+             -> { | ReactSpecOptional props state snapshot spec }
+             -> { | ReactSpecOptional props state snapshot spec }
 whileMounted sig f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff (Signal.subscribeLight (f this) sig)
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff (Signal.clear sig)
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      Signal.subscribeLight f sig
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      Signal.clear sig
+      reactSpec.componentWillUnmount
   }
 
 
-whileMountedIx :: forall props state render eff rw a
-                . IxSignal.IxSignal (read :: READ | rw) (ref :: REF | eff) a
+whileMountedIx :: forall props state snapshot spec rw a
+                . IxSignal.IxSignal (read :: READ | rw) a
                -> String
-               -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-               -> ReactSpec props state render (ref :: REF | eff)
-               -> ReactSpec props state render (ref :: REF | eff)
+               -> (a -> Effect Unit)
+               -> { | ReactSpecOptional props state snapshot spec }
+               -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIx sig k f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff (IxSignal.subscribeIxLight (f this) k sig)
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff (IxSignal.delete k sig)
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      IxSignal.subscribeIxLight f k sig
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      IxSignal.delete k sig
+      reactSpec.componentWillUnmount
   }
 
 
-whileMountedIxDiff :: forall props state render eff rw a
+whileMountedIxDiff :: forall props state snapshot spec rw a
                     . Eq a
-                   => IxSignal.IxSignal (read :: READ | rw) (ref :: REF | eff) a
+                   => IxSignal.IxSignal (read :: READ | rw) a
                    -> String
-                   -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-                   -> ReactSpec props state render (ref :: REF | eff)
-                   -> ReactSpec props state render (ref :: REF | eff)
+                   -> (a -> Effect Unit)
+                   -> { | ReactSpecOptional props state snapshot spec }
+                   -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIxDiff sig k f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff (IxSignal.subscribeIxDiffLight (f this) k sig)
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff (IxSignal.delete k sig)
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      IxSignal.subscribeIxDiffLight f k sig
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      IxSignal.delete k sig
+      reactSpec.componentWillUnmount
   }
 
 
 
-whileMountedIxUUID :: forall props state render eff rw a
-                    . IxSignal.IxSignal (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
-                   -> (ReactThis props state -> a -> Eff (ref :: REF , uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
-                   -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
-                   -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
+whileMountedIxUUID :: forall props state snapshot spec rw a
+                    . IxSignal.IxSignal (read :: READ | rw) a
+                   -> (a -> Effect Unit)
+                   -> { | ReactSpecOptional props state snapshot spec }
+                   -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIxUUID sig f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff $ do
-        k <- genUUID
-        writeRef kRef (Just k)
-        IxSignal.subscribeIxLight (f this) (show k) sig
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ do
-        mk <- readRef kRef
-        case mk of
-          Nothing -> throw "No UUID ref!"
-          Just k -> do
-            IxSignal.delete (show k) sig
-            writeRef kRef Nothing
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      k <- genUUID
+      Ref.write (Just k) kRef
+      IxSignal.subscribeIxLight f (show k) sig
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      mk <- Ref.read kRef
+      case mk of
+        Nothing -> throw "No UUID ref!"
+        Just k -> do
+          IxSignal.delete (show k) sig
+          Ref.write Nothing kRef
+      reactSpec.componentWillUnmount
   }
   where
-    kRef = unsafePerformEff (newRef Nothing)
+    kRef = unsafePerformEffect (Ref.new Nothing)
 
 
 
-whileMountedIxDiffUUID :: forall props state render eff rw a
+whileMountedIxDiffUUID :: forall props state snapshot spec rw a
                         . Eq a
-                      => IxSignal.IxSignal (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
-                      -> (ReactThis props state -> a -> Eff (ref :: REF , uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
-                      -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
-                      -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
+                       => IxSignal.IxSignal (read :: READ | rw) a
+                       -> (a -> Effect Unit)
+                       -> { | ReactSpecOptional props state snapshot spec }
+                       -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIxDiffUUID sig f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff $ do
-        k <- genUUID
-        writeRef kRef (Just k)
-        IxSignal.subscribeIxDiffLight (f this) (show k) sig
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ do
-        mk <- readRef kRef
-        case mk of
-          Nothing -> throw "No UUID ref!"
-          Just k -> do
-            IxSignal.delete (show k) sig
-            writeRef kRef Nothing
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      k <- genUUID
+      Ref.write (Just k) kRef
+      IxSignal.subscribeIxDiffLight f (show k) sig
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      mk <- Ref.read kRef
+      case mk of
+        Nothing -> throw "No UUID ref!"
+        Just k -> do
+          IxSignal.delete (show k) sig
+          Ref.write Nothing kRef
+      reactSpec.componentWillUnmount
   }
   where
-    kRef = unsafePerformEff (newRef Nothing)
+    kRef = unsafePerformEffect (Ref.new Nothing)

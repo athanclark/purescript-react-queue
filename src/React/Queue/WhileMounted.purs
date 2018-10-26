@@ -2,186 +2,182 @@ module React.Queue.WhileMounted where
 
 import Prelude
 import Data.Maybe (Maybe (..))
-import Data.UUID (genUUID, GENUUID)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Exception (EXCEPTION, throw)
-import Control.Monad.Eff.Ref (REF, newRef, writeRef, readRef)
-import Control.Monad.Eff.Unsafe (unsafeCoerceEff, unsafePerformEff)
-import React (ReactSpec, ReactThis)
+import Data.UUID (genUUID)
+import Effect (Effect)
+import Effect.Exception (throw)
+import Effect.Ref as Ref
+import Effect.Unsafe (unsafePerformEffect)
+import React (ReactSpecOptional, ReactThis)
 import Queue.Types (READ)
-import Queue (Queue, onQueue, delQueue, newQueue, putQueue)
-import Queue.One (Queue, onQueue, delQueue, newQueue, putQueue) as One
-import IxQueue (IxQueue, onIxQueue, delIxQueue, newIxQueue, broadcastIxQueue)
+import Queue (Queue)
+import Queue as Queue
+import Queue.One as One
+import IxQueue (IxQueue)
+import IxQueue as IxQueue
 
 
 
 
 -- | Deletes _all_ handlers from `Queue` when unmounting
-whileMounted :: forall props state render eff rw a
-              . Queue (read :: READ | rw) (ref :: REF | eff) a
-             -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-             -> ReactSpec props state render (ref :: REF | eff)
-             -> ReactSpec props state render (ref :: REF | eff)
+whileMounted :: forall props state snapshot rw a spec
+              . Queue (read :: READ | rw) a
+             -> (a -> Effect Unit)
+             -> { | ReactSpecOptional props state snapshot spec }
+             -> { | ReactSpecOptional props state snapshot spec }
 whileMounted q f reactSpec = reactSpec
-  { componentDidMount = \this -> do
-      unsafeCoerceEff (onQueue q (f this))
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      unsafeCoerceEff (delQueue q)
-      reactSpec.componentWillUnmount this
+  { componentDidMount = do
+      Queue.on q f
+      reactSpec.componentDidMount
+  , componentWillUnmount = do
+      Queue.del q
+      reactSpec.componentWillUnmount
   }
 
 
-drainingWhileUnmounted :: forall props state render eff rw a
-                       . Queue (read :: READ | rw) (ref :: REF | eff) a
-                       -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-                       -> ReactSpec props state render (ref :: REF | eff)
-                       -> ReactSpec props state render (ref :: REF | eff)
-drainingWhileUnmounted q f reactSpec =
-  whileMounted q' f
-  $ reactSpec
+drainingWhileUnmounted :: forall props state snapshot rw a spec
+                       . Queue (read :: READ | rw) a
+                       -> (ReactThis props state -> a -> Effect Unit)
+                       -> { | ReactSpecOptional props state snapshot spec }
+                       -> { | ReactSpecOptional props state snapshot spec }
+drainingWhileUnmounted q f reactSpec = whileMounted q' f $
+  reactSpec
     { componentDidMount = \this -> do
-        writeRef isMountedRef true
+        Ref.write isMountedRef true
         reactSpec.componentDidMount this
     , componentWillUnmount = \this -> do
-        writeRef isMountedRef false
+        Ref.write isMountedRef false
         reactSpec.componentWillUnmount this
     }
   where
-    q' = unsafePerformEff newQueue
-    isMountedRef = unsafePerformEff (newRef false)
-    _ = unsafePerformEff $ onQueue q \x -> do
-      isMounted <- readRef isMountedRef
-      when isMounted $ putQueue q' x
+    q' = unsafePerformEffect Queue.new
+    isMountedRef = unsafePerformEffect (Ref.new false)
+    _ = unsafePerformEffect $ Queue.on q \x -> do
+      isMounted <- Ref.read isMountedRef
+      when isMounted (Queue.put q' x)
 
 
 -- | Uses specified index
-whileMountedIx :: forall props state render eff rw a
-                . IxQueue (read :: READ | rw) (ref :: REF | eff) a
+whileMountedIx :: forall props state snapshot rw a spec
+                . IxQueue (read :: READ | rw) a
                -> String
-               -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-               -> ReactSpec props state render (ref :: REF | eff)
-               -> ReactSpec props state render (ref :: REF | eff)
+               -> (ReactThis props state -> a -> Effect Unit)
+               -> { | ReactSpecOptional props state snapshot spec }
+               -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIx q k f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff (onIxQueue q k (f this))
+      IxQueue.on q k (f this)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff (unit <$ delIxQueue q k)
+      unit <$ IxQueue.del q k
       reactSpec.componentWillUnmount this
   }
 
 
-drainingWhileUnmountedIx :: forall props state render eff rw a
-                          . IxQueue (read :: READ | rw) (ref :: REF | eff) a
+drainingWhileUnmountedIx :: forall props state snapshot rw a spec
+                          . IxQueue (read :: READ | rw) a
                           -> String
-                          -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-                          -> ReactSpec props state render (ref :: REF | eff)
-                          -> ReactSpec props state render (ref :: REF | eff)
-drainingWhileUnmountedIx q k f reactSpec =
-  whileMountedIx q' k f
-  $ reactSpec
+                          -> (ReactThis props state -> a -> Effect Unit)
+                          -> { | ReactSpecOptional props state snapshot spec }
+                          -> { | ReactSpecOptional props state snapshot spec }
+drainingWhileUnmountedIx q k f reactSpec = whileMountedIx q' k f $
+  reactSpec
     { componentDidMount = \this -> do
-        writeRef isMountedRef true
+        Ref.write isMountedRef true
         reactSpec.componentDidMount this
     , componentWillUnmount = \this -> do
-        writeRef isMountedRef false
+        Ref.write isMountedRef false
         reactSpec.componentWillUnmount this
     }
   where
-    q' = unsafePerformEff newIxQueue
-    isMountedRef = unsafePerformEff (newRef false)
-    _ = unsafePerformEff $ onIxQueue q k \x -> do
-      isMounted <- readRef isMountedRef
-      when isMounted $ broadcastIxQueue q' x
+    q' = unsafePerformEffect IxQueue.new
+    isMountedRef = unsafePerformEffect (Ref.new false)
+    _ = unsafePerformEffect $ IxQueue.on q k \x -> do
+      isMounted <- Ref.read isMountedRef
+      when isMounted (IxQueue.broadcast q' x)
 
 
 -- | Generates a random index - useful for broadcasted data
-whileMountedIxUUID :: forall props state render eff rw a
-                    . IxQueue (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
-                   -> (ReactThis props state -> a -> Eff (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
-                   -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
-                   -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
+whileMountedIxUUID :: forall props state snapshot rw a spec
+                    . IxQueue (read :: READ | rw) a
+                   -> (ReactThis props state -> a -> Effect Unit)
+                   -> { | ReactSpecOptional props state snapshot spec }
+                   -> { | ReactSpecOptional props state snapshot spec }
 whileMountedIxUUID q f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff $ do
-        k <- genUUID
-        writeRef kRef (Just k)
-        onIxQueue q (show k) (f this)
+      k <- genUUID
+      Ref.write kRef (Just k)
+      IxQueue.on q (show k) (f this)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ do
-        mK <- readRef kRef
-        case mK of
-          Nothing -> throw "No UUID ref!"
-          Just k -> do
-            unit <$ delIxQueue q (show k)
-            writeRef kRef Nothing
+      mK <- Ref.read kRef
+      case mK of
+        Nothing -> throw "No UUID ref!"
+        Just k -> do
+          unit <$ IxQueue.del q (show k)
+          Ref.write kRef Nothing
       reactSpec.componentWillUnmount this
   }
   where
-    kRef = unsafePerformEff (newRef Nothing)
+    kRef = unsafePerformEffect (Ref.new Nothing)
 
 
-drainingWhileUnmountedIxUUID :: forall props state render eff rw a
-                          . IxQueue (read :: READ | rw) (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) a
-                          -> (ReactThis props state -> a -> Eff (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff) Unit)
-                          -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
-                          -> ReactSpec props state render (ref :: REF, uuid :: GENUUID, exception :: EXCEPTION | eff)
-drainingWhileUnmountedIxUUID q f reactSpec =
-  whileMountedIxUUID q' f
-  $ reactSpec
+drainingWhileUnmountedIxUUID :: forall props state snapshot rw a spec
+                              . IxQueue (read :: READ | rw) a
+                             -> (ReactThis props state -> a -> Effect Unit)
+                             -> { | ReactSpecOptional props state snapshot spec }
+                             -> { | ReactSpecOptional props state snapshot spec }
+drainingWhileUnmountedIxUUID q f reactSpec = whileMountedIxUUID q' f $
+  reactSpec
     { componentDidMount = \this -> do
-        writeRef isMountedRef true
+        Ref.write isMountedRef true
         reactSpec.componentDidMount this
     , componentWillUnmount = \this -> do
-        writeRef isMountedRef false
+        Ref.write isMountedRef false
         reactSpec.componentWillUnmount this
     }
   where
-    q' = unsafePerformEff newIxQueue
-    isMountedRef = unsafePerformEff (newRef false)
-    _ = unsafePerformEff $ do
+    q' = unsafePerformEffect IxQueue.new
+    isMountedRef = unsafePerformEffect (Ref.new false)
+    _ = unsafePerformEffect $ do
       k <- show <$> genUUID
-      onIxQueue q k \x -> do
-        isMounted <- readRef isMountedRef
-        when isMounted $ broadcastIxQueue q' x
+      IxQueue.on q k \x -> do
+        isMounted <- Ref.read isMountedRef
+        when isMounted (IxQueue.broadcast q' x)
 
 
 -- | Is the only handler for the singleton queue.
-whileMountedOne :: forall props state render eff rw a
-                 . One.Queue (read :: READ | rw) (ref :: REF | eff) a
-                -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-                -> ReactSpec props state render (ref :: REF | eff)
-                -> ReactSpec props state render (ref :: REF | eff)
+whileMountedOne :: forall props state snapshot rw a spec
+                 . One.Queue (read :: READ | rw) a
+                -> (ReactThis props state -> a -> Effect Unit)
+                -> { | ReactSpecOptional props state snapshot spec }
+                -> { | ReactSpecOptional props state snapshot spec }
 whileMountedOne q f reactSpec = reactSpec
   { componentDidMount = \this -> do
-      unsafeCoerceEff (One.onQueue q (f this))
+      One.on q (f this)
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff (One.delQueue q)
+      One.del q
       reactSpec.componentWillUnmount this
   }
 
 
-drainingWhileUnmountedOne :: forall props state render eff rw a
-                          . One.Queue (read :: READ | rw) (ref :: REF | eff) a
-                          -> (ReactThis props state -> a -> Eff (ref :: REF | eff) Unit)
-                          -> ReactSpec props state render (ref :: REF | eff)
-                          -> ReactSpec props state render (ref :: REF | eff)
-drainingWhileUnmountedOne q f reactSpec =
-  whileMountedOne q' f
-  $ reactSpec
+drainingWhileUnmountedOne :: forall props state snapshot rw a spec
+                           . One.Queue (read :: READ | rw) a
+                          -> (ReactThis props state -> a -> Effect Unit)
+                          -> { | ReactSpecOptional props state snapshot spec }
+                          -> { | ReactSpecOptional props state snapshot spec }
+drainingWhileUnmountedOne q f reactSpec = whileMountedOne q' f $
+  reactSpec
     { componentDidMount = \this -> do
-        writeRef isMountedRef true
+        Ref.write isMountedRef true
         reactSpec.componentDidMount this
     , componentWillUnmount = \this -> do
-        writeRef isMountedRef false
+        Ref.write isMountedRef false
         reactSpec.componentWillUnmount this
     }
   where
-    q' = unsafePerformEff One.newQueue
-    isMountedRef = unsafePerformEff (newRef false)
-    _ = unsafePerformEff $ One.onQueue q \x -> do
-      isMounted <- readRef isMountedRef
-      when isMounted $ One.putQueue q' x
+    q' = unsafePerformEffect One.new
+    isMountedRef = unsafePerformEffect (Ref.new false)
+    _ = unsafePerformEffect $ One.on q \x -> do
+      isMounted <- Ref.read isMountedRef
+      when isMounted $ One.put q' x

@@ -2,9 +2,9 @@ module React.Queue.LifeCycle where
 
 import Prelude
 import Data.Maybe (Maybe (..))
-import Control.Monad.Eff.Ref (REF)
-import Control.Monad.Eff.Exception (Error)
-import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
+-- import Control.Monad.Eff.Ref (REF)
+-- import Control.Monad.Eff.Exception (Error)
+-- import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import React (ReactSpec)
 import Queue.Types (WRITE)
 import Queue (Queue, putQueue)
@@ -22,129 +22,127 @@ data ReactLifeCycle props state
   | DidCatch {error :: Error, componentStack :: String}
 
 
-type Effects eff = (ref :: REF | eff)
 
-
-withLifeCycle :: forall props state render eff rw
-               . Queue (write :: WRITE | rw) (Effects eff) (ReactLifeCycle props state)
-              -> ReactSpec props state render (Effects eff)
-              -> ReactSpec props state render (Effects eff)
+withLifeCycle :: forall props state snapshot spec rw
+               . Queue (write :: WRITE | rw) (ReactLifeCycle props state)
+              -> { | ReactSpecOptional props state snapshot spec }
+              -> { | ReactSpecOptional props state snapshot spec }
 withLifeCycle q reactSpec = reactSpec
   { componentWillMount = \this -> do
-      unsafeCoerceEff $ putQueue q WillMount
+      putQueue q WillMount
       reactSpec.componentWillMount this
   , componentDidMount = \this -> do
-      unsafeCoerceEff $ putQueue q DidMount
+      putQueue q DidMount
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ putQueue q WillUnmount
+      putQueue q WillUnmount
       reactSpec.componentWillUnmount this
   , componentWillUpdate = \this props state -> do
-      unsafeCoerceEff $ putQueue q $ WillUpdate {props,state}
+      putQueue q $ WillUpdate {props,state}
       reactSpec.componentWillUpdate this props state
   , componentDidUpdate = \this props state -> do
-      unsafeCoerceEff $ putQueue q $ DidUpdate {props,state}
+      putQueue q $ DidUpdate {props,state}
       reactSpec.componentDidUpdate this props state
   , componentWillReceiveProps = \this props -> do
-      unsafeCoerceEff $ putQueue q $ WillReceiveProps {props}
+      putQueue q $ WillReceiveProps {props}
       reactSpec.componentWillReceiveProps this props
   , componentDidCatch = Just \this error params -> do
-      unsafeCoerceEff $ putQueue q $ DidCatch {error, componentStack: params.componentStack}
+      putQueue q $ DidCatch {error, componentStack: params.componentStack}
       case reactSpec.componentDidCatch of
         Nothing -> pure unit
         Just f -> f this error params
   }
 
 
-withLifeCycleOne :: forall props state render eff rw
-                  . One.Queue (write :: WRITE | rw) (Effects eff) (ReactLifeCycle props state)
-                 -> ReactSpec props state render (Effects eff)
-                 -> ReactSpec props state render (Effects eff)
+withLifeCycleOne :: forall props state snapshot spec rw
+                  . One.Queue (write :: WRITE | rw) (ReactLifeCycle props state)
+                 -> { | ReactSpecOptional props state snapshot spec }
+                 -> { | ReactSpecOptional props state snapshot spec }
 withLifeCycleOne q reactSpec = reactSpec
   { componentWillMount = \this -> do
-      unsafeCoerceEff $ One.putQueue q WillMount
+      One.putQueue q WillMount
       reactSpec.componentWillMount this
   , componentDidMount = \this -> do
-      unsafeCoerceEff $ One.putQueue q DidMount
+      One.putQueue q DidMount
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ One.putQueue q WillUnmount
+      One.putQueue q WillUnmount
       reactSpec.componentWillUnmount this
   , componentWillUpdate = \this props state -> do
-      unsafeCoerceEff $ One.putQueue q $ WillUpdate {props,state}
+      One.putQueue q $ WillUpdate {props,state}
       reactSpec.componentWillUpdate this props state
   , componentDidUpdate = \this props state -> do
-      unsafeCoerceEff $ One.putQueue q $ DidUpdate {props,state}
+      One.putQueue q $ DidUpdate {props,state}
       reactSpec.componentDidUpdate this props state
   , componentWillReceiveProps = \this props -> do
-      unsafeCoerceEff $ One.putQueue q $ WillReceiveProps {props}
+      One.putQueue q $ WillReceiveProps {props}
       reactSpec.componentWillReceiveProps this props
   , componentDidCatch = Just $ \this error params -> do
-      unsafeCoerceEff $ One.putQueue q $ DidCatch {error, componentStack: params.componentStack}
+      One.putQueue q $ DidCatch {error, componentStack: params.componentStack}
       case reactSpec.componentDidCatch of
         Nothing -> pure unit
         Just f -> f this error params
   }
 
 
-withLifeCycleIx :: forall props state render eff rw
+withLifeCycleIx :: forall props state snapshot spec rw
                  . String
-                -> IxQueue (write :: WRITE | rw) (Effects eff) (ReactLifeCycle props state)
-                -> ReactSpec props state render (Effects eff)
-                -> ReactSpec props state render (Effects eff)
+                -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state)
+                -> { | ReactSpecOptional props state snapshot spec }
+                -> { | ReactSpecOptional props state snapshot spec }
 withLifeCycleIx k q reactSpec = reactSpec
   { componentWillMount = \this -> do
-      unsafeCoerceEff $ putIxQueue q k WillMount
+      putIxQueue q k WillMount
       reactSpec.componentWillMount this
   , componentDidMount = \this -> do
-      unsafeCoerceEff $ putIxQueue q k DidMount
+      putIxQueue q k DidMount
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ putIxQueue q k WillUnmount
+      putIxQueue q k WillUnmount
       reactSpec.componentWillUnmount this
   , componentWillUpdate = \this props state -> do
-      unsafeCoerceEff $ putIxQueue q k $ WillUpdate {props,state}
+      putIxQueue q k $ WillUpdate {props,state}
       reactSpec.componentWillUpdate this props state
   , componentDidUpdate = \this props state -> do
-      unsafeCoerceEff $ putIxQueue q k $ DidUpdate {props,state}
+      putIxQueue q k $ DidUpdate {props,state}
       reactSpec.componentDidUpdate this props state
   , componentWillReceiveProps = \this props -> do
-      unsafeCoerceEff $ putIxQueue q k $ WillReceiveProps {props}
+      putIxQueue q k $ WillReceiveProps {props}
       reactSpec.componentWillReceiveProps this props
   , componentDidCatch = Just \this error params -> do
-      unsafeCoerceEff $ putIxQueue q k $ DidCatch {error, componentStack: params.componentStack}
+      putIxQueue q k $ DidCatch {error, componentStack: params.componentStack}
       case reactSpec.componentDidCatch of
         Nothing -> pure unit
         Just f -> f this error params
   }
 
 
-withLifeCycleBroadcastIx :: forall props state render eff rw
+withLifeCycleBroadcastIx :: forall props state snapshot spec rw
                           . Array String -- exception keys
-                         -> IxQueue (write :: WRITE | rw) (Effects eff) (ReactLifeCycle props state)
-                         -> ReactSpec props state render (Effects eff)
-                         -> ReactSpec props state render (Effects eff)
+                         -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state)
+                         -> { | ReactSpecOptional props state snapshot spec }
+                         -> { | ReactSpecOptional props state snapshot spec }
 withLifeCycleBroadcastIx ks q reactSpec = reactSpec
   { componentWillMount = \this -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks WillMount
+      broadcastExceptIxQueue q ks WillMount
       reactSpec.componentWillMount this
   , componentDidMount = \this -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks DidMount
+      broadcastExceptIxQueue q ks DidMount
       reactSpec.componentDidMount this
   , componentWillUnmount = \this -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks WillUnmount
+      broadcastExceptIxQueue q ks WillUnmount
       reactSpec.componentWillUnmount this
   , componentWillUpdate = \this props state -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ WillUpdate {props,state}
+      broadcastExceptIxQueue q ks $ WillUpdate {props,state}
       reactSpec.componentWillUpdate this props state
   , componentDidUpdate = \this props state -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ DidUpdate {props,state}
+      broadcastExceptIxQueue q ks $ DidUpdate {props,state}
       reactSpec.componentDidUpdate this props state
   , componentWillReceiveProps = \this props -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ WillReceiveProps {props}
+      broadcastExceptIxQueue q ks $ WillReceiveProps {props}
       reactSpec.componentWillReceiveProps this props
   , componentDidCatch = Just \this error params -> do
-      unsafeCoerceEff $ broadcastExceptIxQueue q ks $ DidCatch {error, componentStack: params.componentStack}
+      broadcastExceptIxQueue q ks $ DidCatch {error, componentStack: params.componentStack}
       case reactSpec.componentDidCatch of
         Nothing -> pure unit
         Just f -> f this error params
