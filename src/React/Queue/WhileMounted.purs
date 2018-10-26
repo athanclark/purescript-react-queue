@@ -19,12 +19,11 @@ import IxQueue as IxQueue
 
 
 -- | Deletes _all_ handlers from `Queue` when unmounting
-whileMounted :: forall props state snapshot rw a given spec
-              . ReactComponentSpec { | props } { | state } snapshot given spec
-             => Queue (read :: READ | rw) a
-             -> (ReactThis prop state -> a -> Effect Unit)
-             -> ReactClassConstructor { | props } { | state } given
-             -> ReactClassConstructor { | props } { | state } given
+whileMounted :: forall props state snapshot rw a
+              . Queue (read :: READ | rw) a
+             -> (ReactThis props state -> a -> Effect Unit)
+             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMounted q f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -37,21 +36,20 @@ whileMounted q f constructor = \this -> do
     }
 
 
-drainingWhileUnmounted :: forall props state snapshot rw a given spec
-                        . ReactComponentSpec { | props } { | state } snapshot given spec
-                       => Queue (read :: READ | rw) a
+drainingWhileUnmounted :: forall props state snapshot rw a
+                        . Queue (read :: READ | rw) a
                        -> (ReactThis props state -> a -> Effect Unit)
-                       -> ReactClassConstructor { | props } { | state } given
-                       -> ReactClassConstructor { | props } { | state } given
+                       -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                       -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 drainingWhileUnmounted q f constructor =
   whileMounted q' f $ \this -> do
     reactSpec <- constructor this
     pure $ reactSpec
       { componentDidMount = do
-          Ref.write isMountedRef true
+          Ref.write true isMountedRef
           reactSpec.componentDidMount
       , componentWillUnmount = do
-          Ref.write isMountedRef false
+          Ref.write false isMountedRef
           reactSpec.componentWillUnmount
       }
   where
@@ -63,7 +61,7 @@ drainingWhileUnmounted q f constructor =
 
 
 -- | Uses specified index
-whileMountedIx :: forall props state snapshot rw a spec
+whileMountedIx :: forall props state snapshot rw a
                 . IxQueue (read :: READ | rw) a
                -> String
                -> (ReactThis props state-> a -> Effect Unit)
@@ -81,22 +79,21 @@ whileMountedIx q k f constructor = \this -> do
     }
 
 
-drainingWhileUnmountedIx :: forall props state snapshot rw a given spec
-                          . ReactComponentSpec { | props } { | state } snapshot given spec
-                         => IxQueue (read :: READ | rw) a
+drainingWhileUnmountedIx :: forall props state snapshot rw a
+                          . IxQueue (read :: READ | rw) a
                          -> String
                          -> (ReactThis props state -> a -> Effect Unit)
-                         -> ReactClassConstructor { | props } { | state } given
-                         -> ReactClassConstructor { | props } { | state } given
+                         -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                         -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 drainingWhileUnmountedIx q k f constructor =
   whileMountedIx q' k f $ \this -> do
     reactSpec <- constructor this
     pure $ reactSpec
       { componentDidMount = do
-          Ref.write isMountedRef true
+          Ref.write true isMountedRef
           reactSpec.componentDidMount
       , componentWillUnmount = do
-          Ref.write isMountedRef false
+          Ref.write false isMountedRef
           reactSpec.componentWillUnmount
       }
   where
@@ -108,18 +105,17 @@ drainingWhileUnmountedIx q k f constructor =
 
 
 -- | Generates a random index - useful for broadcasted data
-whileMountedIxUUID :: forall props state snapshot rw a given spec
-                    . ReactComponentSpec { | props } { | state } snapshot given spec
-                   => IxQueue (read :: READ | rw) a
+whileMountedIxUUID :: forall props state snapshot rw a
+                    . IxQueue (read :: READ | rw) a
                    -> (ReactThis props state -> a -> Effect Unit)
-                   -> ReactClassConstructor { | props } { | state } given
-                   -> ReactClassConstructor { | props } { | state } given
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedIxUUID q f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
     { componentDidMount = do
         k <- genUUID
-        Ref.write kRef (Just k)
+        Ref.write (Just k) kRef
         IxQueue.on q (show k) (f this)
         reactSpec.componentDidMount
     , componentWillUnmount = do
@@ -128,28 +124,27 @@ whileMountedIxUUID q f constructor = \this -> do
           Nothing -> throw "No UUID ref!"
           Just k -> do
             unit <$ IxQueue.del q (show k)
-            Ref.write kRef Nothing
+            Ref.write Nothing kRef
         reactSpec.componentWillUnmount
     }
   where
     kRef = unsafePerformEffect (Ref.new Nothing)
 
 
-drainingWhileUnmountedIxUUID :: forall props state snapshot rw a given spec
-                              . ReactComponentSpec { | props } { | state } snapshot given spec
-                             => IxQueue (read :: READ | rw) a
+drainingWhileUnmountedIxUUID :: forall props state snapshot rw a
+                              . IxQueue (read :: READ | rw) a
                              -> (ReactThis props state -> a -> Effect Unit)
-                             -> ReactClassConstructor { | props } { | state } given
-                             -> ReactClassConstructor { | props } { | state } given
+                             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 drainingWhileUnmountedIxUUID q f constructor =
   whileMountedIxUUID q' f $ \this -> do
     reactSpec <- constructor this
     pure $ reactSpec
       { componentDidMount = do
-          Ref.write isMountedRef true
+          Ref.write true isMountedRef
           reactSpec.componentDidMount
       , componentWillUnmount = do
-          Ref.write isMountedRef false
+          Ref.write false isMountedRef
           reactSpec.componentWillUnmount
       }
   where
@@ -163,12 +158,11 @@ drainingWhileUnmountedIxUUID q f constructor =
 
 
 -- | Is the only handler for the singleton queue.
-whileMountedOne :: forall props state snapshot rw a given spec
-                 . ReactComponentSpec { | props } { | state } snapshot given spec
-                => One.Queue (read :: READ | rw) a
-                -> (ReactThis { | props } { | state } -> a -> Effect Unit)
-                -> ReactClassConstructor { | props } { | state } given
-                -> ReactClassConstructor { | props } { | state } given
+whileMountedOne :: forall props state snapshot rw a
+                 . One.Queue (read :: READ | rw) a
+                -> (ReactThis props state -> a -> Effect Unit)
+                -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedOne q f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -181,21 +175,20 @@ whileMountedOne q f constructor = \this -> do
     }
 
 
-drainingWhileUnmountedOne :: forall props state snapshot rw a given spec
-                           . ReactComponentSpec { | props } { | state } snapshot given spec
-                          => One.Queue (read :: READ | rw) a
+drainingWhileUnmountedOne :: forall props state snapshot rw a
+                           . One.Queue (read :: READ | rw) a
                           -> (ReactThis props state -> a -> Effect Unit)
-                          -> ReactClassConstructor { | props } { | state } given
-                          -> ReactClassConstructor { | props } { | state } given
+                          -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                          -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 drainingWhileUnmountedOne q f constructor =
   whileMountedOne q' f $ \this -> do
     reactSpec <- constructor this
     pure $ reactSpec
       { componentDidMount = do
-          Ref.write isMountedRef true
+          Ref.write true isMountedRef
           reactSpec.componentDidMount
       , componentWillUnmount = do
-          Ref.write isMountedRef false
+          Ref.write false isMountedRef
           reactSpec.componentWillUnmount
       }
   where
@@ -203,4 +196,4 @@ drainingWhileUnmountedOne q f constructor =
     isMountedRef = unsafePerformEffect (Ref.new false)
     _ = unsafePerformEffect $ One.on q \x -> do
       isMounted <- Ref.read isMountedRef
-      when isMounted $ One.put q' x
+      when isMounted (One.put q' x)

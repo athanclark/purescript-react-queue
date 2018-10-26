@@ -1,145 +1,109 @@
 module React.Queue.LifeCycle where
 
 import Prelude
-import Data.Maybe (Maybe (..))
-import React (ReactSpec)
+import React (ReactSpecAll, ReactClassConstructor)
+import Effect.Exception (Error)
 import Queue.Types (WRITE)
 import Queue (Queue)
 import Queue as Queue
 import Queue.One as One
+import IxQueue (IxQueue)
 import IxQueue as IxQueue
 
 
-data ReactLifeCycle props state
-  = WillMount
-  | DidMount
+data ReactLifeCycle props state snapshot
+  = DidMount
   | WillUnmount
-  | WillUpdate {props :: props, state :: state}
-  | DidUpdate {props :: props, state :: state}
-  | WillReceiveProps {props :: props}
+  | DidUpdate {props :: props, state :: state, snapshot :: snapshot}
   | DidCatch {error :: Error, componentStack :: String}
 
 
 
-withLifeCycle :: forall props state snapshot spec rw
-               . Queue (write :: WRITE | rw) (ReactLifeCycle props state)
-              -> { | ReactSpecOptional props state snapshot spec }
-              -> { | ReactSpecOptional props state snapshot spec }
-withLifeCycle q reactSpec = reactSpec
-  { componentWillMount = \this -> do
-      Queue.put q WillMount
-      reactSpec.componentWillMount this
-  , componentDidMount = \this -> do
-      Queue.put q DidMount
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      Queue.put q WillUnmount
-      reactSpec.componentWillUnmount this
-  , componentWillUpdate = \this props state -> do
-      Queue.put q $ WillUpdate {props,state}
-      reactSpec.componentWillUpdate this props state
-  , componentDidUpdate = \this props state -> do
-      Queue.put q $ DidUpdate {props,state}
-      reactSpec.componentDidUpdate this props state
-  , componentWillReceiveProps = \this props -> do
-      Queue.put q $ WillReceiveProps {props}
-      reactSpec.componentWillReceiveProps this props
-  , componentDidCatch = Just \this error params -> do
-      Queue.put q $ DidCatch {error, componentStack: params.componentStack}
-      case reactSpec.componentDidCatch of
-        Nothing -> pure unit
-        Just f -> f this error params
-  }
+withLifeCycle :: forall props state snapshot rw
+               . Queue (write :: WRITE | rw) (ReactLifeCycle props state snapshot)
+              -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+              -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+withLifeCycle q constructor = \this -> do
+  reactSpec <- constructor this
+  pure $ reactSpec
+    { componentDidMount = do
+        Queue.put q DidMount
+        reactSpec.componentDidMount
+    , componentWillUnmount = do
+        Queue.put q WillUnmount
+        reactSpec.componentWillUnmount
+    , componentDidUpdate = \props state snapshot -> do
+        Queue.put q $ DidUpdate {props,state,snapshot}
+        reactSpec.componentDidUpdate props state snapshot
+    , componentDidCatch = \error params -> do
+        Queue.put q $ DidCatch {error, componentStack: params.componentStack}
+        reactSpec.componentDidCatch error params
+    }
 
 
-withLifeCycleOne :: forall props state snapshot spec rw
-                  . One.Queue (write :: WRITE | rw) (ReactLifeCycle props state)
-                 -> { | ReactSpecOptional props state snapshot spec }
-                 -> { | ReactSpecOptional props state snapshot spec }
-withLifeCycleOne q reactSpec = reactSpec
-  { componentWillMount = \this -> do
-      One.put q WillMount
-      reactSpec.componentWillMount this
-  , componentDidMount = \this -> do
-      One.put q DidMount
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      One.put q WillUnmount
-      reactSpec.componentWillUnmount this
-  , componentWillUpdate = \this props state -> do
-      One.put q $ WillUpdate {props,state}
-      reactSpec.componentWillUpdate this props state
-  , componentDidUpdate = \this props state -> do
-      One.put q $ DidUpdate {props,state}
-      reactSpec.componentDidUpdate this props state
-  , componentWillReceiveProps = \this props -> do
-      One.put q $ WillReceiveProps {props}
-      reactSpec.componentWillReceiveProps this props
-  , componentDidCatch = Just $ \this error params -> do
-      One.put q $ DidCatch {error, componentStack: params.componentStack}
-      case reactSpec.componentDidCatch of
-        Nothing -> pure unit
-        Just f -> f this error params
-  }
+withLifeCycleOne :: forall props state snapshot rw
+                  . One.Queue (write :: WRITE | rw) (ReactLifeCycle props state snapshot)
+                 -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                 -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+withLifeCycleOne q constructor = \this -> do
+  reactSpec <- constructor this
+  pure $ reactSpec
+    { componentDidMount = do
+        One.put q DidMount
+        reactSpec.componentDidMount
+    , componentWillUnmount = do
+        One.put q WillUnmount
+        reactSpec.componentWillUnmount
+    , componentDidUpdate = \props state snapshot -> do
+        One.put q $ DidUpdate {props,state,snapshot}
+        reactSpec.componentDidUpdate props state snapshot
+    , componentDidCatch = \error params -> do
+        One.put q $ DidCatch {error, componentStack: params.componentStack}
+        reactSpec.componentDidCatch error params
+    }
 
 
-withLifeCycleIx :: forall props state snapshot spec rw
+withLifeCycleIx :: forall props state snapshot rw
                  . String
-                -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state)
-                -> { | ReactSpecOptional props state snapshot spec }
-                -> { | ReactSpecOptional props state snapshot spec }
-withLifeCycleIx k q reactSpec = reactSpec
-  { componentWillMount = \this -> do
-      IxQueue.put q k WillMount
-      reactSpec.componentWillMount this
-  , componentDidMount = \this -> do
-      IxQueue.put q k DidMount
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      IxQueue.put q k WillUnmount
-      reactSpec.componentWillUnmount this
-  , componentWillUpdate = \this props state -> do
-      IxQueue.put q k $ WillUpdate {props,state}
-      reactSpec.componentWillUpdate this props state
-  , componentDidUpdate = \this props state -> do
-      IxQueue.put q k $ DidUpdate {props,state}
-      reactSpec.componentDidUpdate this props state
-  , componentWillReceiveProps = \this props -> do
-      IxQueue.put q k $ WillReceiveProps {props}
-      reactSpec.componentWillReceiveProps this props
-  , componentDidCatch = Just \this error params -> do
-      IxQueue.put q k $ DidCatch {error, componentStack: params.componentStack}
-      case reactSpec.componentDidCatch of
-        Nothing -> pure unit
-        Just f -> f this error params
-  }
+                -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state snapshot)
+                -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+withLifeCycleIx k q constructor = \this -> do
+  reactSpec <- constructor this
+  pure $ reactSpec
+    { componentDidMount = do
+        IxQueue.put q k DidMount
+        reactSpec.componentDidMount
+    , componentWillUnmount = do
+        IxQueue.put q k WillUnmount
+        reactSpec.componentWillUnmount
+    , componentDidUpdate = \props state snapshot -> do
+        IxQueue.put q k $ DidUpdate {props,state,snapshot}
+        reactSpec.componentDidUpdate props state snapshot
+    , componentDidCatch = \error params -> do
+        IxQueue.put q k $ DidCatch {error, componentStack: params.componentStack}
+        reactSpec.componentDidCatch error params
+    }
 
 
-withLifeCycleBroadcastIx :: forall props state snapshot spec rw
+withLifeCycleBroadcastIx :: forall props state snapshot rw
                           . Array String -- exception keys
-                         -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state)
-                         -> { | ReactSpecOptional props state snapshot spec }
-                         -> { | ReactSpecOptional props state snapshot spec }
-withLifeCycleBroadcastIx ks q reactSpec = reactSpec
-  { componentWillMount = \this -> do
-      IxQueue.broadcastExcept q ks WillMount
-      reactSpec.componentWillMount this
-  , componentDidMount = \this -> do
-      IxQueue.broadcastExcept q ks DidMount
-      reactSpec.componentDidMount this
-  , componentWillUnmount = \this -> do
-      IxQueue.broadcastExcept q ks WillUnmount
-      reactSpec.componentWillUnmount this
-  , componentWillUpdate = \this props state -> do
-      IxQueue.broadcastExcept q ks $ WillUpdate {props,state}
-      reactSpec.componentWillUpdate this props state
-  , componentDidUpdate = \this props state -> do
-      IxQueue.broadcastExcept q ks $ DidUpdate {props,state}
-      reactSpec.componentDidUpdate this props state
-  , componentWillReceiveProps = \this props -> do
-      IxQueue.broadcastExcept q ks $ WillReceiveProps {props}
-      reactSpec.componentWillReceiveProps this props
-  , componentDidCatch = \this error params -> do
-      IxQueue.broadcastExcept q ks $ DidCatch {error, componentStack: params.componentStack}
-      reactSpec.componentDidCatch this error params
-  }
+                         -> IxQueue (write :: WRITE | rw) (ReactLifeCycle props state snapshot)
+                         -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                         -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+withLifeCycleBroadcastIx ks q constructor = \this -> do
+  reactSpec <- constructor this
+  pure $ reactSpec
+    { componentDidMount = do
+        IxQueue.broadcastExcept q ks DidMount
+        reactSpec.componentDidMount
+    , componentWillUnmount = do
+        IxQueue.broadcastExcept q ks WillUnmount
+        reactSpec.componentWillUnmount
+    , componentDidUpdate = \props state snapshot -> do
+        IxQueue.broadcastExcept q ks $ DidUpdate {props,state,snapshot}
+        reactSpec.componentDidUpdate props state snapshot
+    , componentDidCatch = \error params -> do
+        IxQueue.broadcastExcept q ks $ DidCatch {error, componentStack: params.componentStack}
+        reactSpec.componentDidCatch error params
+    }

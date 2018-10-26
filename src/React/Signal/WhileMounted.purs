@@ -7,18 +7,17 @@ import Effect (Effect)
 import Effect.Exception (throw)
 import Effect.Ref as Ref
 import Effect.Unsafe (unsafePerformEffect)
-import React (class ReactComponentSpec, ReactClassConstructor, ReactThis)
+import React (ReactSpecAll, ReactClassConstructor, ReactThis)
 import Signal.Types (READ)
 import Signal.Internal as Signal
 import IxSignal.Internal as IxSignal
 
 
-whileMounted :: forall props state snapshot given spec rw a
-              . ReactComponentSpec { | props } { | state } snapshot given spec
-             => Signal.Signal (read :: READ | rw) a
+whileMounted :: forall props state snapshot rw a
+              . Signal.Signal (read :: READ | rw) a
              -> (ReactThis props state -> a -> Effect Unit)
-             -> ReactClassConstructor { | props } { | state } given
-             -> ReactClassConstructor { | props } { | state } given
+             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMounted sig f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -31,13 +30,12 @@ whileMounted sig f constructor = \this -> do
     }
 
 
-whileMountedIx :: forall props state snapshot given spec rw a
-                . ReactComponentSpec { | props } { | state } snapshot given spec
-               => IxSignal.IxSignal (read :: READ | rw) a
+whileMountedIx :: forall props state snapshot rw a
+                . IxSignal.IxSignal (read :: READ | rw) a
                -> String
                -> (ReactThis props state -> a -> Effect Unit)
-               -> ReactClassConstructor { | props } { | state } given
-               -> ReactClassConstructor { | props } { | state } given
+               -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+               -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedIx sig k f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -50,14 +48,13 @@ whileMountedIx sig k f constructor = \this -> do
     }
 
 
-whileMountedIxDiff :: forall props state snapshot given spec rw a
+whileMountedIxDiff :: forall props state snapshot rw a
                     . Eq a
-                   => ReactComponentSpec { | props } { | state } snapshot given spec
                    => IxSignal.IxSignal (read :: READ | rw) a
                    -> String
                    -> (ReactThis props state -> a -> Effect Unit)
-                   -> ReactClassConstructor { | props } { | state } given
-                   -> ReactClassConstructor { | props } { | state } given
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedIxDiff sig k f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -71,12 +68,11 @@ whileMountedIxDiff sig k f constructor = \this -> do
 
 
 
-whileMountedIxUUID :: forall props state snapshot given spec rw a
-                    . ReactComponentSpec { | props } { | state } snapshot given spec
-                   => IxSignal.IxSignal (read :: READ | rw) a
+whileMountedIxUUID :: forall props state snapshot rw a
+                    . IxSignal.IxSignal (read :: READ | rw) a
                    -> (ReactThis props state -> a -> Effect Unit)
-                   -> ReactClassConstructor { | props } { | state } given
-                   -> ReactClassConstructor { | props } { | state } given
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedIxUUID sig f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
@@ -99,13 +95,12 @@ whileMountedIxUUID sig f constructor = \this -> do
 
 
 
-whileMountedIxDiffUUID :: forall props state snapshot given spec rw a
+whileMountedIxDiffUUID :: forall props state snapshot rw a
                         . Eq a
-                       => ReactComponentSpec { | props } { | state } snapshot given spec
                        => IxSignal.IxSignal (read :: READ | rw) a
                        -> (ReactThis props state -> a -> Effect Unit)
-                       -> ReactClassConstructor { | props } { | state } given
-                       -> ReactClassConstructor { | props } { | state } given
+                       -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
+                       -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
 whileMountedIxDiffUUID sig f constructor = \this -> do
   reactSpec <- constructor this
   pure $ reactSpec
