@@ -1,16 +1,16 @@
 module React.Signal.WhileMounted where
 
-import Prelude
+import Prelude (Unit, class Eq, bind, discard, ($), pure, show)
 import Data.Maybe (Maybe (..))
 import Data.UUID (genUUID)
 import Effect (Effect)
 import Effect.Exception (throw)
-import Effect.Ref as Ref
+import Effect.Ref (new, write, read) as Ref
 import Effect.Unsafe (unsafePerformEffect)
 import React (ReactSpecAll, ReactClassConstructor, ReactThis)
 import Signal.Types (READ)
-import Signal.Internal as Signal
-import IxSignal.Internal as IxSignal
+import Signal (Signal, subscribeLight, clear) as Signal
+import IxSignal (IxSignal, subscribeIxLight, subscribeIxDiffLight, delete) as IxSignal
 
 
 whileMounted :: forall props state snapshot rw a

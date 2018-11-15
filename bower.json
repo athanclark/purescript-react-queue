@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "purescript-prelude": "^4.1.0",
-    "purescript-queue": "^7.1.0",
+    "purescript-queue": "^7.1.3",
     "purescript-react": "^6.1.0",
     "purescript-exceptions": "^4.0.0",
-    "purescript-zeta": "^3.0.0"
+    "purescript-zeta": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

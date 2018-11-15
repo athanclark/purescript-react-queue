@@ -1,19 +1,19 @@
 module React.Queue.WhileMounted where
 
-import Prelude
+import Prelude (Unit, bind, discard, pure, ($), show, (<$>), (<$), when, unit)
 import Data.Maybe (Maybe (..))
 import Data.UUID (genUUID)
 import Effect (Effect)
 import Effect.Exception (throw)
-import Effect.Ref as Ref
+import Effect.Ref (new, read, write) as Ref
 import Effect.Unsafe (unsafePerformEffect)
 import React (ReactSpecAll, ReactClassConstructor, ReactThis)
 import Queue.Types (READ)
 import Queue (Queue)
-import Queue as Queue
-import Queue.One as One
+import Queue (on, del, new, put) as Queue
+import Queue.One (Queue, on, del, new, put) as One
 import IxQueue (IxQueue)
-import IxQueue as IxQueue
+import IxQueue (on, del, new, broadcast) as IxQueue
 
 
 

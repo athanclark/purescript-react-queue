@@ -1,14 +1,14 @@
 module React.Queue.LifeCycle where
 
-import Prelude
+import Prelude (bind, pure, ($), discard)
 import React (ReactSpecAll, ReactClassConstructor)
 import Effect.Exception (Error)
 import Queue.Types (WRITE)
 import Queue (Queue)
-import Queue as Queue
-import Queue.One as One
+import Queue (put) as Queue
+import Queue.One (Queue, put) as One
 import IxQueue (IxQueue)
-import IxQueue as IxQueue
+import IxQueue (put, broadcastExcept) as IxQueue
 
 
 data ReactLifeCycle props state snapshot
