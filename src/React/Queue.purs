@@ -4,4 +4,4 @@ module React.Queue
   ) where
 
 import React.Queue.LifeCycle (ReactLifeCycle (..), withLifeCycle, withLifeCycleOne, withLifeCycleIx)
-import React.Queue.WhileMounted (whileMounted, whileMountedOne, whileMountedIx, whileMountedIxUUID)
+import React.Queue.WhileMounted (whileMounted, whileMountedOne, whileMountedIx)

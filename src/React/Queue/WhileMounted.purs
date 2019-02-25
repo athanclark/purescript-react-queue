@@ -1,10 +1,7 @@
 module React.Queue.WhileMounted where
 
-import Prelude (Unit, bind, discard, pure, ($), show, (<$>), (<$), when, unit)
-import Data.Maybe (Maybe (..))
-import Data.UUID (genUUID)
+import Prelude (Unit, bind, discard, pure, ($), (<$), when, unit)
 import Effect (Effect)
-import Effect.Exception (throw)
 import Effect.Ref (new, read, write) as Ref
 import Effect.Unsafe (unsafePerformEffect)
 import React (ReactSpecAll, ReactClassConstructor, ReactThis)
@@ -102,59 +99,6 @@ drainingWhileUnmountedIx q k f constructor =
     _ = unsafePerformEffect $ IxQueue.on q k \x -> do
       isMounted <- Ref.read isMountedRef
       when isMounted (IxQueue.broadcast q' x)
-
-
--- | Generates a random index - useful for broadcasted data
-whileMountedIxUUID :: forall props state snapshot rw a
-                    . IxQueue (read :: READ | rw) a
-                   -> (ReactThis props state -> a -> Effect Unit)
-                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
-                   -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
-whileMountedIxUUID q f constructor = \this -> do
-  reactSpec <- constructor this
-  pure $ reactSpec
-    { componentDidMount = do
-        k <- genUUID
-        Ref.write (Just k) kRef
-        IxQueue.on q (show k) (f this)
-        reactSpec.componentDidMount
-    , componentWillUnmount = do
-        mK <- Ref.read kRef
-        case mK of
-          Nothing -> throw "No UUID ref!"
-          Just k -> do
-            unit <$ IxQueue.del q (show k)
-            Ref.write Nothing kRef
-        reactSpec.componentWillUnmount
-    }
-  where
-    kRef = unsafePerformEffect (Ref.new Nothing)
-
-
-drainingWhileUnmountedIxUUID :: forall props state snapshot rw a
-                              . IxQueue (read :: READ | rw) a
-                             -> (ReactThis props state -> a -> Effect Unit)
-                             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
-                             -> ReactClassConstructor props state (ReactSpecAll props state snapshot)
-drainingWhileUnmountedIxUUID q f constructor =
-  whileMountedIxUUID q' f $ \this -> do
-    reactSpec <- constructor this
-    pure $ reactSpec
-      { componentDidMount = do
-          Ref.write true isMountedRef
-          reactSpec.componentDidMount
-      , componentWillUnmount = do
-          Ref.write false isMountedRef
-          reactSpec.componentWillUnmount
-      }
-  where
-    q' = unsafePerformEffect IxQueue.new
-    isMountedRef = unsafePerformEffect (Ref.new false)
-    _ = unsafePerformEffect $ do
-      k <- show <$> genUUID
-      IxQueue.on q k \x -> do
-        isMounted <- Ref.read isMountedRef
-        when isMounted (IxQueue.broadcast q' x)
 
 
 -- | Is the only handler for the singleton queue.
