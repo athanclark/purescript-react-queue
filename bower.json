@@ -12,11 +12,11 @@
     "url": "git://github.com/athanclark/purescript-react-queue.git"
   },
   "dependencies": {
-    "purescript-prelude": "^4.1.0",
-    "purescript-queue": "^8.0.0",
-    "purescript-react": "^6.1.0",
+    "purescript-prelude": "^4.1.1",
+    "purescript-queue": "^8.0.1",
+    "purescript-react": "^7.0.1",
     "purescript-exceptions": "^4.0.0",
-    "purescript-zeta": "^5.0.0"
+    "purescript-zeta": "^5.0.2"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
