@@ -9,16 +9,12 @@
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "git://github.com/athanclark/purescript-react-queue.git"
+    "url": "https://github.com/athanclark/purescript-react-queue.git"
   },
   "dependencies": {
-    "purescript-prelude": "^4.1.1",
     "purescript-queue": "^8.0.1",
-    "purescript-react": "^7.0.1",
+    "purescript-react": "^8.0.0",
     "purescript-exceptions": "^4.0.0",
-    "purescript-zeta": "^5.0.2"
-  },
-  "devDependencies": {
-    "purescript-psci-support": "^4.0.0"
+    "purescript-zeta": "^6.0.0"
   }
 }

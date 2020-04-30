@@ -4,8 +4,8 @@ import Prelude (bind, discard, pure)
 import Effect (Effect)
 import Effect.Exception (Error)
 import React (ReactSpecOptional)
-import Signal.Types (READ, WRITE)
-import Signal (Signal, make, set) as Signal
+import Zeta.Types (READ, WRITE)
+import Zeta (Signal, make, set) as Signal
 
 
 data ReactLifeCycle props state snapshot

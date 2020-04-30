@@ -5,9 +5,9 @@ import Effect (Effect)
 import React
   ( ReactClassConstructor, ReactThis, ComponentDidMount, ComponentWillUnmount, ReactElement, ReactClass, ReactSpecRequired
   , createLeafElement, createElement, component, setState, getState, createContext)
-import Signal.Types (READ)
-import Signal (Signal, subscribeLight, clear, get) as Signal
-import IxSignal (IxSignal, subscribeLight, subscribeDiffLight, delete, get) as IxSignal
+import Zeta.Types (READ)
+import Zeta (Signal, subscribeLight, clear, get) as Signal
+import IxZeta (IxSignal, subscribeLight, subscribeDiffLight, delete, get) as IxSignal
 
 
 type Mounted r = (componentDidMount :: ComponentDidMount, componentWillUnmount :: ComponentWillUnmount | r)
